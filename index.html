@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>MIDI Send Note Number</title>
+  </head>
+  <body>
+    <p>
+      <label for="output_selector">Select MIDI Port: </label>
+      <select name="output_selector" id="output_selector"></select>
+    </p>
+    <h3>Enter Send MIDI Note Number</h3>
+    <p>
+      <input id="pitch_button" type="number" min = "0" max = "127" >
+      <button id="play_button">Play</button>
+    </p>
+
+    <script src="scripts/midi.js"></script>
+  </body>
+</html>
