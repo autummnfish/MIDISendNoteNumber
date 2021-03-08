@@ -45,7 +45,7 @@ function createPianoKeyboard(minNumber) {
 joinMIDIMessage();
 
 function joinMIDIMessage() {
-  const piano_key_id = piano_field.childNodes; 
+  const piano_key_id = piano_field.childNodes;
   callMIDIMessage(piano_key_id);
 }
 
@@ -68,7 +68,6 @@ function sendMIDIMessage(note) {
 //   const output = setMIDIOutput(outputSelector);
 //   const sendNote = Number(note);
 // }
-
 
 // function stopMIDIMessage(note){
 //   const output = setMIDIOutput(outputSelector);
@@ -98,9 +97,10 @@ function changeKeyboard(pitch) {
 
 //playボタンが押されたら
 playButton.addEventListener("click", () => {
-  changeKeyboard(pitchButton.value); 
+  changeKeyboard(pitchButton.value); //
 });
 
+//キーボードが押された場合の処理、アルファベットとenterキー以外は動作しない
 window.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
     changeKeyboard(pitchButton.value);
@@ -108,7 +108,6 @@ window.addEventListener("keydown", (e) => {
     keyLayout.get(e.key) !== undefined &&
     keyLayout.get(e.key) !== null
   ) {
-    //sendする
     sendMIDIMessage(keyLayout.get(e.key));
   }
 });
@@ -130,8 +129,6 @@ function isValidValue(value, min, max) {
   }
   return true;
 }
-
-
 
 function initMap(map, minN) {
   map.set("z", minN);
