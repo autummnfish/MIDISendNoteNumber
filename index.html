@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <title>MIDI Send Note Number</title>
+    <link rel="stylesheet" href="styles/piano.css">
   </head>
   <body>
     <p>
@@ -11,8 +12,9 @@
     </p>
     <h3>Enter Send MIDI Note Number</h3>
     <p>
-      <input id="pitch_button" type="number" min = "0" max = "127" >
-      <button id="play_button">Play</button>
+      <button id="pitch_up_button">UP</button>
+      <button id="pitch_down_button">DOWN</button>
+      <div id="piano_button"></div>
     </p>
 
     <script src="scripts/midi.js"></script>
