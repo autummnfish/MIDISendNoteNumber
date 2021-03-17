@@ -1,56 +1,54 @@
 "use strict";
-//ATTENTION: ん？って思ったやつの7割くらいはコールバックとかの非同期処理を理解してないことによるバグだぞ、特にaddEventListenerとPromise
-
-/***
- *
- *MUST TODO: MIDIデバイスの接続を拒否 or 許可する前にボタンを操作した場合に発生するエラーに対して例外を投げたい <-実装終了
- *TODO: キーボード長押しで音がぶつ切れになるのを防ぐ
+/*
+ *コードの制約上,MIDIはA0(ラの音)から始まっちゃうのでそのへんは要相談(とりあえずC0からはじめる)
+ *コードはA~Gの7種類
  */
+//c0 = 12,c1 = 24,c2 = 36,c3 = 48,c4 = 60,c5 = 72,c6 = 84,c7 = 96,c8 = 108,c9 = 120
+//実装はc7を上限とした(左端の限界がc7)
+//TODO: 和音<-シリアル通信だから厳しいかも
 const outputSelector = document.querySelector("#output_selector");
 const playButton = document.querySelector("#play_button");
 const pitchButton = document.querySelector("#pitch_area");
 const piano_field = document.querySelector("#piano_button");
+const pitchUpButton = document.querySelector("#pitch_up_button");
+const pitchDownButton = document.querySelector("#pitch_down_button");
 const keyLayArray = [
   //キーボード配列を配列に代入したもの
-  "z",
-  "s",
-  "x",
-  "d",
-  "c",
-  "f",
-  "v",
-  "g",
-  "b",
-  "h",
-  "n",
-  "j",
-  "m", //下段ここまで
-  "q",
-  "2",
-  "w",
-  "3",
-  "e",
-  "4",
-  "r",
-  "5",
-  "t",
-  "6",
-  "y",
-  "7",
-  "u",
-  "8",
-  "i",
-  "9",
-  "o",
-  "0",
-  "p",
+  //長さは26
+  "z",//c
+  "s",//
+  "x",//d
+  "d",//
+  "c",//e
+  "v",//f
+  "g",//
+  "b",//g
+  "h",//
+  "n",//a
+  "j",//
+  "m",//b
+  ",",// c//下段ここまで
+  "1",//
+  "q",//d
+  "2",//
+  "w",//e
+  "e",//f
+  "4",//
+  "r",//g
+  "5",//
+  "t",//a
+  "6",//
+  "y",//b
+  "u",//c
+  "8",//
 ];
 const pianoKeyLength = keyLayArray.length;
+const mod = 12;
 let MIDIOutputAccess = null;
 let pitch = null;
-let noteMinNumber = 48;
-let keyLayout = new Map();
-initMap(keyLayout, noteMinNumber);
+let noteMinNumber = 48;//C3からはじめる
+let keyLayout = initMap(noteMinNumber);
+let isSendMap = initSendNoteMap();
 
 navigator.requestMIDIAccess({ sysex: true }).then(callSucess, callFail);
 
@@ -58,27 +56,40 @@ const piano_key_id = piano_field.childNodes;
 createPianoKeyboard(noteMinNumber, pianoKeyLength);
 joinMIDIMessage(piano_key_id);
 
-//playボタンが押されたら
-playButton.addEventListener("click", () => {
-  updateKeyboard(pitchButton.value); //HACK: アロー関数のなかで関数呼び出し
-});
-
-//キーボードが押された場合の処理、enter以外の特殊キーは無視
+//キーボードが押された場合の処理、矢印キー上下の場合キーボードが変更される
 window.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    updateKeyboard(pitchButton.value);
+  if (e.key === "ArrowDown") {
+    const deltaNum = -12;
+    changePitchUpDown(noteMinNumber, deltaNum);
+  } else if (e.key === "ArrowUp") {
+    const addNum = 12;
+    changePitchUpDown(noteMinNumber, addNum);
   } else if (
     keyLayout.get(e.key) !== undefined &&
     keyLayout.get(e.key) !== null
   ) {
-    sendMIDIMessage(keyLayout.get(e.key), true);
+    if (!isSendMap.get(e.key)) {
+      isSendMap.set(e.key, true);
+      sendMIDIMessage(keyLayout.get(e.key), true);
+    }
   }
 });
 
 window.addEventListener("keyup", (e) => {
   if (keyLayout.get(e.key) != null) {
+    isSendMap.set(e.key, false);
     sendMIDIMessage(keyLayout.get(e.key), false);
   }
+});
+
+pitchUpButton.addEventListener("click", () => {
+  const addNum = 12;
+  changePitchUpDown(noteMinNumber, addNum);
+});
+
+pitchDownButton.addEventListener("click", () => {
+  const deltaNum = -12;
+  changePitchUpDown(noteMinNumber, deltaNum);
 });
 
 function callSucess(midiAccess) {
@@ -101,29 +112,36 @@ function createPianoKeyboard(minNumber, lenge) {
   for (let i = minNumber; i <= minNumber + lenge; i++) {
     let keyboard = document.createElement("button");
     keyboard.id = `node${i}`;
-    keyboard.innerText = `${i}`;
+    if(i % mod === 1 || i % mod === 3 || i % mod === 6 || i % mod === 8 || i % mod === 10){
+      keyboard.className = "black";
+    } else {
+      keyboard.className = "white";
+    }
+    keyboard.innerText = `${i}`; //TODO: いつか消してピアノっぽくCSSを適用する
     piano_field.appendChild(keyboard);
   }
 }
 
 function joinMIDIMessage(sendId) {
   for (let i = 0; i < sendId.length; i++) {
+    const IDNumber = sendId[i].id.slice(4);//id名であるnodeiのiのみの部分文字列を取得
     sendId[i].addEventListener("mousedown", () => {
-      sendMIDIMessage(sendId[i].innerText, true); //HACK: アロー関数の中に関数呼び出し
+      sendMIDIMessage(IDNumber, true);
     });
     sendId[i].addEventListener("mouseup", () => {
       //TODO: 音を止める関数
-      sendMIDIMessage(sendId[i].innerText, false);
+      sendMIDIMessage(IDNumber, false);
     });
     sendId[i].addEventListener("mouseout", () => {
-      sendMIDIMessage(sendId[i].innerText, false);
+      sendMIDIMessage(IDNumber, false);
     });
   }
 }
 
 function sendMIDIMessage(note, bool) {
-  const MIDIOutput = setMIDIOutput(outputSelector); //FIXME: グローバルにするとエラー
-  if (MIDIOutput !== -1) {//-1はindeの例外
+  const MIDIOutput = setMIDIOutput(outputSelector);
+  if (MIDIOutput !== -1) {
+    //-1はindeの例外
     const sendNote = Number(note);
     if (bool) {
       MIDIOutput.send([0x90, sendNote, 100]);
@@ -131,7 +149,7 @@ function sendMIDIMessage(note, bool) {
       MIDIOutput.send([0x80, sendNote, 100]);
     }
   } else {
-    alert(`Please admit MIDI access`);
+    alert(`Please admit MIDI access`); //TODO: うざったいので別の方法で警告を出したい
   }
 }
 
@@ -139,7 +157,6 @@ function setMIDIOutput(targetSelector) {
   //ポート番号を指定
   const index = targetSelector.selectedIndex;
   if (index < 0) {
-    
     return index;
   } else {
     const portId = targetSelector[index].value;
@@ -157,7 +174,7 @@ function updateKeyboard(pitch) {
     noteMinNumber = Number(pitch);
     createPianoKeyboard(Number(pitch), pianoKeyLength);
     joinMIDIMessage(piano_key_id);
-    initMap(keyLayout, noteMinNumber);
+    keyLayout = initMap(noteMinNumber);
   }
 }
 
@@ -170,17 +187,32 @@ function resetKeyboard(start) {
 
 function isValidValue(value, min, max) {
   if (value === null || value === undefined || value === "") {
-    alert("Please enter number");
     return false;
   } else if (value < min || value > max) {
-    alert("The number is out of lenge");
     return false;
   }
   return true;
 }
 
-function initMap(map, minN) {
+function initMap(minN) {
+  let map = new Map();
   for (let i = 0; i < keyLayArray.length; i++) {
     map.set(keyLayArray[i], minN + i);
+  }
+  return map;
+}
+
+//TODO: 音を鳴らすかどうかを決めるための、boolとキーを格納したマップをつくる
+function initSendNoteMap() {
+  let map = new Map();
+  for (let i = 0; i < keyLayArray.length; i++) {
+    map.set(keyLayArray[i], false);
+  }
+  return map;
+}
+
+function changePitchUpDown(noteNum, addNum) {
+  if (noteNum + addNum < 96 && noteNum + addNum >= 0) {
+    updateKeyboard(noteNum + addNum);
   }
 }
