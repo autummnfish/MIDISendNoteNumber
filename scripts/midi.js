@@ -15,38 +15,42 @@ const pitchDownButton = document.querySelector("#pitch_down_button");
 const keyLayArray = [
   //キーボード配列を配列に代入したもの
   //長さは26
-  "z",//c
-  "s",//
-  "x",//d
-  "d",//
-  "c",//e
-  "v",//f
-  "g",//
-  "b",//g
-  "h",//
-  "n",//a
-  "j",//
-  "m",//b
-  ",",// c//下段ここまで
-  "1",//
-  "q",//d
-  "2",//
-  "w",//e
-  "e",//f
-  "4",//
-  "r",//g
-  "5",//
-  "t",//a
-  "6",//
-  "y",//b
-  "u",//c
-  "8",//
+  "z", //c
+  "s", //
+  "x", //d
+  "d", //
+  "c", //e
+  "v", //f
+  "g", //
+  "b", //g
+  "h", //
+  "n", //a
+  "j", //
+  "m", //b
+  ",", // c//下段ここまで
+  "1", //
+  "q", //d
+  "2", //
+  "w", //e
+  "e", //f
+  "4", //
+  "r", //g
+  "5", //
+  "t", //a
+  "6", //
+  "y", //b
+  "u", //c
+  "8", //
+  "i", // d
 ];
 const pianoKeyLength = keyLayArray.length;
 const mod = 12;
+const black = "black",
+  white = "white",
+  blackSide = "sd";
 let MIDIOutputAccess = null;
 let pitch = null;
-let noteMinNumber = 48;//C3からはじめる
+let noteMinNumber = 48; //C3からはじめる
 let keyLayout = initMap(noteMinNumber);
 let isSendMap = initSendNoteMap();
 
@@ -71,14 +75,20 @@ window.addEventListener("keydown", (e) => {
     if (!isSendMap.get(e.key)) {
       isSendMap.set(e.key, true);
       sendMIDIMessage(keyLayout.get(e.key), true);
+      const keyValueIndex = Number(keyLayout.get(e.key)) % noteMinNumber;
+      const keyId = piano_key_id[keyValueIndex];
+      changeClassName(keyValueIndex, keyId, true);
     }
   }
 });
 
 window.addEventListener("keyup", (e) => {
-  if (keyLayout.get(e.key) != null) {
+  if (keyLayout.get(e.key) !== null && keyLayout.get(e.key) !== undefined) {
     isSendMap.set(e.key, false);
     sendMIDIMessage(keyLayout.get(e.key), false);
+    const keyValueIndex = Number(keyLayout.get(e.key)) % noteMinNumber;
+    const keyId = piano_key_id[keyValueIndex];
+    changeClassName(keyValueIndex, keyId, false);
   }
 });
 
@@ -109,31 +119,41 @@ function callFail(err) {
 
 function createPianoKeyboard(minNumber, lenge) {
   //鍵盤作成
-  for (let i = minNumber; i <= minNumber + lenge; i++) {
-    let keyboard = document.createElement("button");
+  const chordSize = 12;
+  const chordKindArray = ["C", "D", "E", "F", "G", "A", "B"];
+  let now = 0;
+  for (let i = minNumber; i < minNumber + lenge; i++) {
+    let keyboard = document.createElement("li");
     keyboard.id = `node${i}`;
-    if(i % mod === 1 || i % mod === 3 || i % mod === 6 || i % mod === 8 || i % mod === 10){
-      keyboard.className = "black";
+    if (isBlackKey(i)) {
+      keyboard.className = `${black}`;
+      keyboard.innerText = "";
     } else {
-      keyboard.className = "white";
+      const chd = chordKindArray[now % chordKindArray.length];
+      const isSide = isBlackSide(chd);
+      if (isSide) {
+        keyboard.className = `${white} ${blackSide}`;
+      } else {
+        keyboard.className = `${white}`;
+      }
+      keyboard.innerText = `${chd}${Math.floor(i / chordSize) - 1}`;
+      now++;
     }
-    keyboard.innerText = `${i}`; //TODO: いつか消してピアノっぽくCSSを適用する
+
     piano_field.appendChild(keyboard);
   }
 }
 
 function joinMIDIMessage(sendId) {
   for (let i = 0; i < sendId.length; i++) {
-    const IDNumber = sendId[i].id.slice(4);//id名であるnodeiのiのみの部分文字列を取得
+    const IDNumber = sendId[i].id.slice(4); //id名であるnodeiのiのみの部分文字列を取得
     sendId[i].addEventListener("mousedown", () => {
       sendMIDIMessage(IDNumber, true);
+      changeClassName(i, sendId[i], true);
     });
     sendId[i].addEventListener("mouseup", () => {
-      //TODO: 音を止める関数
       sendMIDIMessage(IDNumber, false);
-    });
-    sendId[i].addEventListener("mouseout", () => {
-      sendMIDIMessage(IDNumber, false);
+      changeClassName(i, sendId[i], false);
     });
   }
 }
@@ -179,7 +199,7 @@ function updateKeyboard(pitch) {
 }
 
 function resetKeyboard(start) {
-  for (let i = start; i <= start + pianoKeyLength; i++) {
+  for (let i = start; i < start + pianoKeyLength; i++) {
     const R = document.querySelector(`#node${i}`);
     piano_field.removeChild(R);
   }
@@ -194,6 +214,19 @@ function isValidValue(value, min, max) {
   return true;
 }
 
+function isBlackKey(n) {
+  if (
+    n % mod === 1 ||
+    n % mod === 3 ||
+    n % mod === 6 ||
+    n % mod === 8 ||
+    n % mod === 10
+  ) {
+    return true;
+  }
+  return false;
+}
+
 function initMap(minN) {
   let map = new Map();
   for (let i = 0; i < keyLayArray.length; i++) {
@@ -202,7 +235,6 @@ function initMap(minN) {
   return map;
 }
 
-//TODO: 音を鳴らすかどうかを決めるための、boolとキーを格納したマップをつくる
 function initSendNoteMap() {
   let map = new Map();
   for (let i = 0; i < keyLayArray.length; i++) {
@@ -215,4 +247,36 @@ function changePitchUpDown(noteNum, addNum) {
   if (noteNum + addNum < 96 && noteNum + addNum >= 0) {
     updateKeyboard(noteNum + addNum);
   }
+}
+
+function changePushMode(keyId, color, isPush) {
+  const chd = keyId.innerText.slice(0, 1);
+  const isSide = isBlackSide(chd);
+  if (isPush) {
+    if (isSide) {
+      keyId.className = `${color}_pushed ${blackSide}`;
+    } else {
+      keyId.className = `${color}_pushed`;
+    }
+  } else {
+    if (isSide) {
+      keyId.className = `${color} ${blackSide}`;
+    } else {
+      keyId.className = `${color}`;
+    }
+  }
+}
+
+function changeClassName(n, keyId, isPush) {
+  if (isBlackKey(n)) {
+    changePushMode(keyId, black, isPush);
+  } else {
+    changePushMode(keyId, white, isPush);
+  }
+}
+
+function isBlackSide(chd) {
+  const sideArray = ["A", "B", "D", "G", "E"];
+
+  return sideArray.includes(chd);
 }
