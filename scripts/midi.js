@@ -5,7 +5,6 @@
  */
 //c0 = 12,c1 = 24,c2 = 36,c3 = 48,c4 = 60,c5 = 72,c6 = 84,c7 = 96,c8 = 108,c9 = 120
 //実装はc7を上限とした(左端の限界がc7)
-//TODO: 和音<-シリアル通信だから厳しいかも
 const outputSelector = document.querySelector("#output_selector");
 const playButton = document.querySelector("#play_button");
 const pitchButton = document.querySelector("#pitch_area");
@@ -15,6 +14,7 @@ const pitchDownButton = document.querySelector("#pitch_down_button");
 const keyLayArray = [
   //キーボード配列を配列に代入したもの
   //長さは26
+
   "z", //c
   "s", //
   "x", //d
@@ -51,6 +51,7 @@ const black = "black",
 let MIDIOutputAccess = null;
 let pitch = null;
 let noteMinNumber = 48; //C3からはじめる
+
 let keyLayout = initMap(noteMinNumber);
 let isSendMap = initSendNoteMap();
 
@@ -78,17 +79,21 @@ window.addEventListener("keydown", (e) => {
       const keyValueIndex = Number(keyLayout.get(e.key)) % noteMinNumber;
       const keyId = piano_key_id[keyValueIndex];
       changeClassName(keyValueIndex, keyId, true);
+
     }
   }
 });
 
 window.addEventListener("keyup", (e) => {
+
   if (keyLayout.get(e.key) !== null && keyLayout.get(e.key) !== undefined) {
     isSendMap.set(e.key, false);
     sendMIDIMessage(keyLayout.get(e.key), false);
     const keyValueIndex = Number(keyLayout.get(e.key)) % noteMinNumber;
     const keyId = piano_key_id[keyValueIndex];
     changeClassName(keyValueIndex, keyId, false);
+
+
   }
 });
 
@@ -140,6 +145,8 @@ function createPianoKeyboard(minNumber, lenge) {
       now++;
     }
 
+
+
     piano_field.appendChild(keyboard);
   }
 }
@@ -154,6 +161,8 @@ function joinMIDIMessage(sendId) {
     sendId[i].addEventListener("mouseup", () => {
       sendMIDIMessage(IDNumber, false);
       changeClassName(i, sendId[i], false);
+
+
     });
   }
 }
@@ -200,6 +209,7 @@ function updateKeyboard(pitch) {
 
 function resetKeyboard(start) {
   for (let i = start; i < start + pianoKeyLength; i++) {
+
     const R = document.querySelector(`#node${i}`);
     piano_field.removeChild(R);
   }
@@ -235,6 +245,7 @@ function initMap(minN) {
   return map;
 }
 
+
 function initSendNoteMap() {
   let map = new Map();
   for (let i = 0; i < keyLayArray.length; i++) {
@@ -248,6 +259,7 @@ function changePitchUpDown(noteNum, addNum) {
     updateKeyboard(noteNum + addNum);
   }
 }
+
 
 function changePushMode(keyId, color, isPush) {
   const chd = keyId.innerText.slice(0, 1);
