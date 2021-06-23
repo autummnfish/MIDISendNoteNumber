@@ -141,7 +141,7 @@ function createPianoKeyboard(minNumber, lenge) {
       } else {
         keyboard.className = `${white}`;
       }
-      keyboard.innerText = `${chd}${Math.floor(i / chordSize) - 1}`;
+      keyboard.innerText = `${i}`;
       now++;
     }
 
